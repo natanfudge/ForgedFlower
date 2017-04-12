@@ -7,8 +7,10 @@ import org.jetbrains.java.decompiler.main.collectors.ImportCollector;
 import org.jetbrains.java.decompiler.main.extern.IFernflowerLogger;
 import org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences;
 import org.jetbrains.java.decompiler.modules.decompiler.vars.VarProcessor;
+import org.jetbrains.java.decompiler.main.extern.IVariableNamingFactory;
 import org.jetbrains.java.decompiler.modules.renamer.PoolInterceptor;
 import org.jetbrains.java.decompiler.struct.StructContext;
+import org.jetbrains.java.decompiler.util.JADNameProvider;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -21,6 +23,7 @@ public class DecompilerContext {
   public static final String CURRENT_CLASS_NODE = "CURRENT_CLASS_NODE";
   public static final String CURRENT_METHOD_WRAPPER = "CURRENT_METHOD_WRAPPER";
   public static final String CURRENT_VAR_PROCESSOR = "CURRENT_VAR_PROCESSOR";
+  public static final String RENAMER_FACTORY = "RENAMER_FACTORY";
 
   private static volatile DecompilerContext currentContext = null;
 
@@ -33,6 +36,7 @@ public class DecompilerContext {
   private VarProcessor varProcessor;
   private CounterContainer counterContainer;
   private BytecodeSourceMapper bytecodeSourceMapper;
+  private IVariableNamingFactory renamerFactory;
 
   private DecompilerContext(Map<String, Object> properties,
                             IFernflowerLogger logger,
@@ -74,6 +78,22 @@ public class DecompilerContext {
     }
 
     currentContext = new DecompilerContext(properties, logger, structContext, classProcessor, interceptor);
+
+    if (DecompilerContext.getProperty(RENAMER_FACTORY) != null) {
+      try {
+        currentContext.renamerFactory = Class.forName((String) DecompilerContext.getProperty(RENAMER_FACTORY)).asSubclass(IVariableNamingFactory.class).newInstance();
+      } catch (Exception e) {
+        if (getLogger() != null)
+          getLogger().writeMessage("Error loading renamer factory class", e);
+      }
+    }
+    if (DecompilerContext.getNamingFactory() == null) {
+      if (DecompilerContext.getOption(IFernflowerPreferences.USE_JAD_VARNAMING)) {
+        currentContext.renamerFactory = new JADNameProvider.JADNameProviderFactory();
+      } else {
+        currentContext.renamerFactory = new IdentityRenamerFactory();
+      }
+    }
   }
 
   public static void clearContext() {
@@ -138,6 +158,10 @@ public class DecompilerContext {
 
   public static CounterContainer getCounterContainer() {
     return currentContext.counterContainer;
+  }
+
+  public static IVariableNamingFactory getNamingFactory() {
+    return currentContext.renamerFactory;
   }
 
   public static BytecodeSourceMapper getBytecodeSourceMapper() {
