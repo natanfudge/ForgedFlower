@@ -529,7 +529,7 @@ public class NestedClassProcessor {
               if (mapParamsToNewVars.containsKey(varIndex)) {
                 VarVersionPair newVar = mapParamsToNewVars.get(varIndex);
                 method.varproc.getExternalVars().add(newVar);
-                return new VarExprent(newVar.var, method.varproc.getVarType(newVar), method.varproc);
+                return new VarExprent(newVar.var, method.varproc.getVarType(newVar), method.varproc, exprent.bytecode);
               }
             }
             else if (exprent.type == Exprent.EXPRENT_FIELD) {
@@ -540,7 +540,7 @@ public class NestedClassProcessor {
                 //		mapFieldsToNewVars.containsKey(key)) {
                 VarVersionPair newVar = mapFieldsToNewVars.get(key);
                 method.varproc.getExternalVars().add(newVar);
-                return new VarExprent(newVar.var, method.varproc.getVarType(newVar), method.varproc);
+                return new VarExprent(newVar.var, method.varproc.getVarType(newVar), method.varproc, exprent.bytecode);
               }
             }
 
