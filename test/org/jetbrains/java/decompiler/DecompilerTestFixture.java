@@ -22,6 +22,7 @@ public class DecompilerTestFixture {
   private File tempDir;
   private File targetDir;
   private TestConsoleDecompiler decompiler;
+  private boolean cleanup = true;
 
   public void setUp(String... optionPairs) throws IOException {
     assertThat(optionPairs.length % 2).isEqualTo(0);
@@ -55,7 +56,7 @@ public class DecompilerTestFixture {
   }
 
   public void tearDown() {
-    if (tempDir != null) {
+    if (tempDir != null && cleanup) {
       delete(tempDir);
     }
     decompiler.close();
@@ -75,6 +76,14 @@ public class DecompilerTestFixture {
 
   public ConsoleDecompiler getDecompiler() {
     return decompiler;
+  }
+  
+  public void setCleanup(boolean value) {
+    this.cleanup = value;
+  }
+  
+  public boolean getCleanup() {
+    return cleanup;
   }
 
   private static boolean isTestDataDir(File dir) {
