@@ -158,7 +158,47 @@ public class StructContext {
     }
   }
 
+  public void addData(String path, String cls, byte[] data, boolean isOwn) throws IOException {
+        ContextUnit unit = units.get(path);
+        if (unit == null) {
+          unit = new ContextUnit(ContextUnit.TYPE_FOLDER, path, cls, isOwn, saver, decompiledData);
+          units.put(path, unit);
+        }
+
+        StructClass cl = new StructClass(data, isOwn, loader);
+        classes.put(cl.qualifiedName, cl);
+        unit.addClass(cl, cls);
+        loader.addClassLink(cl.qualifiedName, new LazyLoader.Link(path, cls, data));
+  }
+
   public Map<String, StructClass> getClasses() {
     return classes;
+  }
+
+
+  public boolean instanceOf(String valclass, String refclass) {
+    if (valclass.equals(refclass)) {
+      return true;
+    }
+
+    StructClass cl = this.getClass(valclass);
+    if (cl == null) {
+      return false;
+    }
+
+    if (cl.superClass != null && this.instanceOf(cl.superClass.getString(), refclass)) {
+      return true;
+    }
+
+    int[] interfaces = cl.getInterfaces();
+    for (int i = 0; i < interfaces.length; i++) {
+      String intfc = cl.getPool().getPrimitiveConstant(interfaces[i]).getString();
+
+      if (this.instanceOf(intfc, refclass)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

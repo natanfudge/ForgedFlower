@@ -6,6 +6,7 @@ package org.jetbrains.java.decompiler.main;
 import org.jetbrains.java.decompiler.main.ClassesProcessor.ClassNode;
 import org.jetbrains.java.decompiler.main.extern.*;
 import org.jetbrains.java.decompiler.modules.renamer.ConverterHelper;
+import org.jetbrains.java.decompiler.main.collectors.CounterContainer;
 import org.jetbrains.java.decompiler.modules.renamer.IdentifierConverter;
 import org.jetbrains.java.decompiler.modules.renamer.PoolInterceptor;
 import org.jetbrains.java.decompiler.struct.IDecompiledData;
@@ -13,8 +14,12 @@ import org.jetbrains.java.decompiler.struct.StructClass;
 import org.jetbrains.java.decompiler.struct.StructContext;
 import org.jetbrains.java.decompiler.struct.lazy.LazyLoader;
 import org.jetbrains.java.decompiler.util.TextBuffer;
+import org.jetbrains.java.decompiler.util.ClasspathScanner;
 
+import java.io.File;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class Fernflower implements IDecompiledData {
   private final StructContext structContext;
@@ -35,6 +40,15 @@ public class Fernflower implements IDecompiledData {
     }
 
     DecompilerContext.initContext(options, logger, structContext, classProcessor, interceptor);
+
+    String vendor = System.getProperty("java.vendor", "missing vendor");
+    String javaVersion = System.getProperty("java.version", "missing java version");
+    String jvmVersion = System.getProperty("java.vm.version", "missing jvm version");
+    logger.writeMessage(String.format("JVM info: %s - %s - %s", vendor, javaVersion, jvmVersion), IFernflowerLogger.Severity.INFO);
+
+    if (DecompilerContext.getOption(IFernflowerPreferences.INCLUDE_ENTIRE_CLASSPATH)) {
+      ClasspathScanner.addAllClasspath(structContext);
+    }
   }
 
   public void decompileContext() {

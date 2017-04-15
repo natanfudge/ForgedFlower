@@ -17,7 +17,6 @@ import org.jetbrains.java.decompiler.modules.decompiler.vars.VarVersionPair;
 import org.jetbrains.java.decompiler.struct.StructClass;
 import org.jetbrains.java.decompiler.struct.gen.VarType;
 import org.jetbrains.java.decompiler.struct.gen.generics.GenericClassDescriptor;
-import org.jetbrains.java.decompiler.struct.gen.generics.GenericMain;
 import org.jetbrains.java.decompiler.util.InterpreterUtil;
 import org.jetbrains.java.decompiler.util.ListStack;
 
@@ -36,6 +35,7 @@ public class NewExprent extends Exprent {
   private boolean anonymous;
   private boolean lambda;
   private boolean enumConst;
+  private List<VarType> genericArgs = new ArrayList<>();
 
   public NewExprent(VarType newType, ListStack<Exprent> stack, int arrayDim, BitSet bytecodeOffsets) {
     this(newType, getDimensions(arrayDim, stack), bytecodeOffsets);
@@ -72,6 +72,24 @@ public class NewExprent extends Exprent {
   @Override
   public VarType getExprType() {
     return anonymous ? DecompilerContext.getClassProcessor().getMapRootClasses().get(newType.value).anonymousClassType : newType;
+  }
+
+  @Override
+  public VarType getInferredExprType(VarType upperBound) {
+    genericArgs.clear();
+    if (newType.type == CodeConstants.TYPE_OBJECT && newType.arrayDim == 0) {
+      StructClass node = DecompilerContext.getStructContext().getClass(newType.value);
+
+      if (node != null && node.getSignature() != null) {
+        GenericClassDescriptor sig = node.getSignature();
+        VarType _new = this.gatherGenerics(upperBound, sig.genericType, sig.fparameters, genericArgs);
+        if (sig.genericType != _new) {
+          return _new;
+        }
+      }
+    }
+    
+    return getExprType();
   }
 
   @Override
@@ -169,17 +187,17 @@ public class NewExprent extends Exprent {
           }
         }
 
-        GenericClassDescriptor descriptor = ClassWriter.getGenericClassDescriptor(child.classStruct);
+        GenericClassDescriptor descriptor = child.getWrapper().getClassStruct().getSignature();
         if (descriptor != null) {
           if (descriptor.superinterfaces.isEmpty()) {
-            buf.append(GenericMain.getGenericCastTypeName(descriptor.superclass));
+            buf.append(ExprProcessor.getCastTypeName(descriptor.superclass));
           }
           else {
             if (descriptor.superinterfaces.size() > 1 && !lambda) {
               DecompilerContext.getLogger().writeMessage("Inconsistent anonymous class signature: " + child.classStruct.qualifiedName,
                                                          IFernflowerLogger.Severity.WARN);
             }
-            buf.append(GenericMain.getGenericCastTypeName(descriptor.superinterfaces.get(0)));
+            buf.append(ExprProcessor.getCastTypeName(descriptor.superinterfaces.get(0)));
           }
         }
         else {
@@ -187,6 +205,7 @@ public class NewExprent extends Exprent {
         }
       }
 
+      appendParameters(buf, genericArgs);
       buf.append('(');
 
       if (!lambda && constructor != null) {
@@ -278,6 +297,7 @@ public class NewExprent extends Exprent {
 
         int start = enumConst ? 2 : 0;
         if (!enumConst || start < parameters.size()) {
+          appendParameters(buf, genericArgs);
           buf.append('(');
 
           boolean firstParam = true;

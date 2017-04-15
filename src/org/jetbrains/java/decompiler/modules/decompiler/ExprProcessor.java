@@ -27,6 +27,8 @@ import org.jetbrains.java.decompiler.struct.consts.PrimitiveConstant;
 import org.jetbrains.java.decompiler.struct.gen.MethodDescriptor;
 import org.jetbrains.java.decompiler.struct.gen.VarType;
 import org.jetbrains.java.decompiler.util.TextUtil;
+import org.jetbrains.java.decompiler.struct.gen.generics.GenericMain;
+import org.jetbrains.java.decompiler.struct.gen.generics.GenericType;
 
 import java.util.*;
 
@@ -499,7 +501,7 @@ public class ExprProcessor implements CodeConstants {
           exprlist.add(new ExitExprent(instr.opcode == opc_athrow ? ExitExprent.EXIT_THROW : ExitExprent.EXIT_RETURN,
                                        instr.opcode == opc_return ? null : stack.pop(),
                                        instr.opcode == opc_athrow ? null : methodDescriptor.ret,
-                                       bytecode_offsets));
+                                       bytecode_offsets, methodDescriptor));
           break;
         case opc_monitorenter:
         case opc_monitorexit:
@@ -688,7 +690,13 @@ public class ExprProcessor implements CodeConstants {
     else if (tp == CodeConstants.TYPE_VOID) {
       return "void";
     }
+    else if (tp == CodeConstants.TYPE_GENVAR && type.isGeneric()) {
+      return type.value;
+    }
     else if (tp == CodeConstants.TYPE_OBJECT) {
+      if (type.isGeneric()) {
+        return ((GenericType)type).getCastName();
+      }
       String ret = buildJavaClassName(type.value);
       if (getShort) {
         ret = DecompilerContext.getImportCollector().getShortName(ret);
@@ -807,6 +815,8 @@ public class ExprProcessor implements CodeConstants {
         tracer.incrementCurrentSourceLine();
       }
 
+      expr.getInferredExprType(null);
+
       TextBuffer content = expr.toJava(indent, tracer);
 
       if (content.length() > 0) {
@@ -865,7 +875,7 @@ public class ExprProcessor implements CodeConstants {
                                          boolean castAlways,
                                          boolean castNarrowing,
                                          BytecodeMappingTracer tracer) {
-    VarType rightType = exprent.getExprType();
+    VarType rightType = exprent.getInferredExprType(leftType);
 
     boolean cast =
       castAlways ||
