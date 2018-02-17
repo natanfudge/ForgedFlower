@@ -7,6 +7,8 @@ import org.jetbrains.java.decompiler.code.CodeConstants;
 import org.jetbrains.java.decompiler.util.TextBuffer;
 import org.jetbrains.java.decompiler.main.DecompilerContext;
 import org.jetbrains.java.decompiler.main.collectors.BytecodeMappingTracer;
+import org.jetbrains.java.decompiler.main.extern.IFernflowerLogger.Severity;
+import org.jetbrains.java.decompiler.main.rels.MethodWrapper;
 import org.jetbrains.java.decompiler.modules.decompiler.ExprProcessor;
 import org.jetbrains.java.decompiler.modules.decompiler.vars.CheckTypesResult;
 import org.jetbrains.java.decompiler.struct.gen.VarType;
@@ -325,6 +327,9 @@ public class FunctionExprent extends Exprent {
             this.needsCast = false;
           }
         }
+        else {
+            this.needsCast = right.type == CodeConstants.TYPE_NULL || !DecompilerContext.getStructContext().instanceOf(right.value, upperBound.value);
+        }
       }
       else { //TODO: Capture generics to make cast better?
         this.needsCast = right.type == CodeConstants.TYPE_NULL || !DecompilerContext.getStructContext().instanceOf(right.value, cast.value);
@@ -569,7 +574,7 @@ public class FunctionExprent extends Exprent {
         TYPES[funcType - FUNCTION_I2L]) + ")");
     }
 
-    //		return "<unknown function>";
+    //        return "<unknown function>";
     throw new RuntimeException("invalid function");
   }
 
@@ -650,7 +655,7 @@ public class FunctionExprent extends Exprent {
     measureBytecode(values, lstOperands);
     measureBytecode(values);
   }
-  
+
   // *****************************************************************************
   // IMatchable implementation
   // *****************************************************************************
