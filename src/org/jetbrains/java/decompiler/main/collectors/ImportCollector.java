@@ -108,9 +108,34 @@ public class ImportCollector {
     // check for another class which could 'shadow' this one. Two cases:
     // 1) class with the same short name in the current package
     // 2) class with the same short name in the default package
+    // 3) inner class with the same short name in the current class
+    // 4) inner class with the same short name in a super class
     boolean existsDefaultClass =
       (context.getClass(currentPackageSlash + shortName) != null && !packageName.equals(currentPackagePoint)) || // current package
       (context.getClass(shortName) != null && !currentPackagePoint.isEmpty());  // default package
+
+    ClassNode cl = (ClassNode)DecompilerContext.getProperty(DecompilerContext.CURRENT_CLASS_NODE);
+
+    if (!existsDefaultClass && isSuperInnerClass(cl, shortName)) {
+      // if the class being accessed is also an inner class
+      // attempt to import the outer class and reference OuterClass.InnerClass
+      if (context.getClass(packageName.replace('.', '/') + "$" + shortName) != null) {
+        lastDot = fullName.lastIndexOf(".", lastDot - 1);
+        if (lastDot >= 0) {
+          result = fullName.substring(lastDot + 1);
+          shortName = packageName.substring(lastDot + 1);
+          packageName = packageName.substring(0, lastDot);
+
+          if (isSuperInnerClass(cl, result.replace('.', '$'))) {
+            existsDefaultClass = true;
+            result = null;
+          }
+        }
+      }
+      else {
+        existsDefaultClass = true;
+      }
+    }
 
     if (existsDefaultClass ||
         (mapSimpleNames.containsKey(shortName) && !packageName.equals(mapSimpleNames.get(shortName)))) {
@@ -125,6 +150,21 @@ public class ImportCollector {
     }
 
     return result == null ? shortName : result;
+  }
+
+  private boolean isSuperInnerClass(ClassNode cl, String className) {
+    StructContext context = DecompilerContext.getStructContext();
+
+    while (cl != null) {
+      if (context.getClass(cl.classStruct.qualifiedName + "$" + className) != null) {
+        return true;
+      }
+
+      String qualifiedName = cl.classStruct.superClass.getString();
+      cl = DecompilerContext.getClassProcessor().getMapRootClasses().get(qualifiedName);
+    }
+
+    return false;
   }
 
   public int writeImports(TextBuffer buffer) {
