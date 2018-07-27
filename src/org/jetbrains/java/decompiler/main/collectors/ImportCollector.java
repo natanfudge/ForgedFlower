@@ -132,8 +132,28 @@ public class ImportCollector {
     // 3) inner class with the same short name in the current class, a super class, or an implemented interface
     boolean existsDefaultClass =
       (context.getClass(currentPackageSlash + shortName) != null && !packageName.equals(currentPackagePoint)) || // current package
-      (context.getClass(shortName) != null && !currentPackagePoint.isEmpty()) || // default package
-      setInnerClassNames.contains(shortName); // inner class
+      (context.getClass(shortName) != null && !currentPackagePoint.isEmpty());
+
+    if (!existsDefaultClass && setInnerClassNames.contains(shortName)) {
+      // if the class being accessed is also an inner class
+      // attempt to import the outer class and reference OuterClass.InnerClass
+      if (context.getClass(packageName.replace('.', '/') + "$" + shortName) != null) {
+        lastDot = fullName.lastIndexOf(".", lastDot - 1);
+        if (lastDot >= 0) {
+          result = fullName.substring(lastDot + 1);
+          shortName = packageName.substring(lastDot + 1);
+          packageName = packageName.substring(0, lastDot);
+
+          if (setInnerClassNames.contains(result.replace('.', '$'))) {
+            existsDefaultClass = true;
+            result = null;
+          }
+        }
+      }
+      else {
+        existsDefaultClass = true;
+      }
+    }
 
     if (existsDefaultClass ||
         (mapSimpleNames.containsKey(shortName) && !packageName.equals(mapSimpleNames.get(shortName)))) {
