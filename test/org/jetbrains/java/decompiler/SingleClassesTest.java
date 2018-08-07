@@ -100,4 +100,5 @@ public class SingleClassesTest extends SingleClassesTestBase {
   @Test public void testGroovyClass() { doTest("pkg/TestGroovyClass"); }
   @Test public void testGroovyTrait() { doTest("pkg/TestGroovyTrait"); }
   @Test public void testPrivateClasses() { doTest("pkg/PrivateClasses"); }
+  @Test public void testTryWithResources() { doTest("pkg/TestTryWithResources"); }
 }
