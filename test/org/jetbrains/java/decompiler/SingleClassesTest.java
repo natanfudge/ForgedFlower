@@ -102,4 +102,5 @@ public class SingleClassesTest extends SingleClassesTestBase {
   @Test public void testPrivateClasses() { doTest("pkg/PrivateClasses"); }
   @Test public void testTryWithResources() { doTest("pkg/TestTryWithResources"); }
   @Test public void testInvertedFloatComparison() { doTest("pkg/TestInvertedFloatComparison"); }
+  @Test public void testLambdaImports() { doTest("pkg/TestLambdaImports"); }
 }

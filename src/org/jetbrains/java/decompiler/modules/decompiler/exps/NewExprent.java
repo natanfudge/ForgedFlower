@@ -164,7 +164,7 @@ public class NewExprent extends Exprent {
     if (anonymous) {
       ClassNode child = DecompilerContext.getClassProcessor().getMapRootClasses().get(newType.value);
 
-      if (!enumConst) {
+      if (!enumConst && (!lambda || DecompilerContext.getOption(IFernflowerPreferences.LAMBDA_TO_ANONYMOUS_CLASS))) {
         String enclosing = null;
 
         if (!lambda && constructor != null) {
