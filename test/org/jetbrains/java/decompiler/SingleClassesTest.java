@@ -88,6 +88,7 @@ public class SingleClassesTest extends SingleClassesTestBase {
   @Test public void testPop2OneLongPop2() { doTest("pkg/TestPop2OneLongPop2"); }
   @Test public void testPop2TwoIntPop2() { doTest("pkg/TestPop2TwoIntPop2"); }
   @Test public void testPop2TwoIntTwoPop() { doTest("pkg/TestPop2TwoIntTwoPop"); }
+  @Test public void testInterfaceSuper() { doTest("pkg/TestInterfaceSuper"); }
 
   // TODO: fix all below
   //@Test public void testPackageInfo() { doTest("pkg/package-info"); }
@@ -95,7 +96,6 @@ public class SingleClassesTest extends SingleClassesTestBase {
   //@Test public void testUnionType() { doTest("pkg/TestUnionType"); }
   //@Test public void testInnerClassConstructor2() { doTest("pkg/TestInner2"); }
   //@Test public void testInUse() { doTest("pkg/TestInUse"); }
-  //@Test public void testInterfaceSuper() { doTest("pkg/TestInterfaceSuper"); }
 
   @Test public void testGroovyClass() { doTest("pkg/TestGroovyClass"); }
   @Test public void testGroovyTrait() { doTest("pkg/TestGroovyTrait"); }
