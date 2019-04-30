@@ -241,7 +241,8 @@ public class VarExprent extends Exprent {
 
     VarType vt = null;
     if (processor != null) {
-      vt = processor.getVarType(getVarVersionPair());
+      String name = processor.getVarName(getVarVersionPair());
+      vt = inferredLambdaTypes.containsKey(name) ? inferredLambdaTypes.get(name) : processor.getVarType(getVarVersionPair());
     }
 
     if (vt == null || (varType != null && varType.type != CodeConstants.TYPE_UNKNOWN)) {
