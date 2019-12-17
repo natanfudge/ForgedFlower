@@ -553,6 +553,7 @@ public class ClassWriter {
     ClassWrapper wrapper = node.getWrapper();
     StructClass cl = wrapper.getClassStruct();
     MethodWrapper methodWrapper = wrapper.getMethodWrapper(mt.getName(), mt.getDescriptor());
+    int clFlags = node.type == ClassNode.CLASS_ROOT ? cl.getAccessFlags() : node.access;
 
     boolean hideMethod = false;
     int start_index_method = buffer.length();
@@ -754,7 +755,7 @@ public class ClassWriter {
             BytecodeMappingTracer codeTracer = new BytecodeMappingTracer(tracer.getCurrentSourceLine());
             TextBuffer code = root.toJava(indent + 1, codeTracer);
 
-            hideMethod = (clinit || dinit || hideConstructor(wrapper, init, throwsExceptions, paramCount)) && code.length() == 0;
+            hideMethod = (clinit || dinit || hideConstructor(wrapper, init, throwsExceptions, paramCount, clFlags, flags)) && code.length() == 0;
 
             buffer.append(code);
 
@@ -794,10 +795,17 @@ public class ClassWriter {
     return !hideMethod;
   }
 
-  private static boolean hideConstructor(ClassWrapper wrapper, boolean init, boolean throwsExceptions, int paramCount) {
+  private static boolean hideConstructor(ClassWrapper wrapper, boolean init, boolean throwsExceptions, int paramCount, int clFlags, int mtFlags) {
     if (!init || throwsExceptions || paramCount > 0 || !DecompilerContext.getOption(IFernflowerPreferences.HIDE_DEFAULT_CONSTRUCTOR)) {
       return false;
     }
+
+    int ACC_MASK = CodeConstants.ACC_PUBLIC | CodeConstants.ACC_PRIVATE | CodeConstants.ACC_PROTECTED;
+
+    int clAccess = clFlags & ACC_MASK;
+    int mtAccess = mtFlags & ACC_MASK;
+    if ((clFlags & (CodeConstants.ACC_ENUM | CodeConstants.ACC_ABSTRACT)) == 0 && clAccess != mtAccess)
+        return false; //Don't hide initalizers that change access level.
 
     int count = 0;
     for (StructMethod mt : wrapper.getClassStruct().getMethods()) {
