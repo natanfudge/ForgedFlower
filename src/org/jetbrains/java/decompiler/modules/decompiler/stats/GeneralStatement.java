@@ -1,10 +1,8 @@
-/*
- * Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler.modules.decompiler.stats;
 
-import org.jetbrains.java.decompiler.util.TextBuffer;
 import org.jetbrains.java.decompiler.main.collectors.BytecodeMappingTracer;
+import org.jetbrains.java.decompiler.util.TextBuffer;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
@@ -21,7 +19,7 @@ public class GeneralStatement extends Statement {
     type = Statement.TYPE_GENERAL;
   }
 
-  public GeneralStatement(Statement head, Collection<Statement> statements, Statement post) {
+  public GeneralStatement(Statement head, Collection<? extends Statement> statements, Statement post) {
 
     this();
 
@@ -42,6 +40,7 @@ public class GeneralStatement extends Statement {
   // public methods
   // *****************************************************************************
 
+  @Override
   public TextBuffer toJava(int indent, BytecodeMappingTracer tracer) {
     TextBuffer buf = new TextBuffer();
 

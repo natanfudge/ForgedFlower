@@ -6,10 +6,8 @@ package org.jetbrains.java.decompiler.modules.decompiler.exps;
 import org.jetbrains.java.decompiler.main.ClassesProcessor.ClassNode;
 import org.jetbrains.java.decompiler.code.CodeConstants;
 import org.jetbrains.java.decompiler.main.DecompilerContext;
-import org.jetbrains.java.decompiler.util.TextBuffer;
 import org.jetbrains.java.decompiler.main.collectors.BytecodeMappingTracer;
 import org.jetbrains.java.decompiler.main.collectors.CounterContainer;
-import org.jetbrains.java.decompiler.main.rels.ClassWrapper;
 import org.jetbrains.java.decompiler.main.rels.MethodWrapper;
 import org.jetbrains.java.decompiler.modules.decompiler.ExprProcessor;
 import org.jetbrains.java.decompiler.modules.decompiler.vars.CheckTypesResult;
@@ -22,6 +20,7 @@ import org.jetbrains.java.decompiler.struct.match.IMatchable;
 import org.jetbrains.java.decompiler.struct.match.MatchEngine;
 import org.jetbrains.java.decompiler.struct.match.MatchNode;
 import org.jetbrains.java.decompiler.struct.match.MatchNode.RuleValue;
+import org.jetbrains.java.decompiler.util.TextBuffer;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -157,18 +156,19 @@ public abstract class Exprent implements IMatchable {
       exprent.getBytecodeRange(values);
   }
 
-  protected static void measureBytecode(BitSet values, List<Exprent> list) {
+  protected static void measureBytecode(BitSet values, List<? extends Exprent> list) {
     if (list != null && !list.isEmpty()) {
       for (Exprent e : list)
         e.getBytecodeRange(values);
     }
   }
 
-  public static List<Exprent> sortIndexed(List<Exprent> lst) {
+  public static List<Exprent> sortIndexed(List<? extends Exprent> lst) {
       List<Exprent> ret = new ArrayList<Exprent>();
       List<VarExprent> defs = new ArrayList<VarExprent>();
 
       Comparator<VarExprent> comp = new Comparator<VarExprent>() {
+        @Override
         public int compare(VarExprent o1, VarExprent o2) {
           return o1.getIndex() - o2.getIndex();
         }

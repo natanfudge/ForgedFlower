@@ -3,7 +3,6 @@ public class TestMethodReferenceSameName {
 
    private void foo() {
       TestMethodReferenceSameName.R1 var10000 = this.r;// 5
-      this.r.getClass();
       (var10000::foo).run();
    }// 6
 
@@ -17,27 +16,18 @@ class 'TestMethodReferenceSameName' {
    method 'foo ()V' {
       0      4
       1      4
-      2      4
-      3      4
-      5      5
-      6      5
-      7      5
-      e      6
-      f      6
-      10      6
-      11      6
-      12      6
-      13      7
+      e      5
+      13      6
    }
 }
 
 class 'TestMethodReferenceSameName$R1' {
    method 'foo ()V' {
-      0      11
+      0      10
    }
 }
 
 Lines mapping:
 5 <-> 5
-6 <-> 8
-9 <-> 12
+6 <-> 7
+9 <-> 11

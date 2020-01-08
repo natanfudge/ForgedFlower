@@ -1,4 +1,4 @@
-// Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler.modules.decompiler;
 
 import org.jetbrains.java.decompiler.code.CodeConstants;
@@ -69,7 +69,7 @@ public class SwitchHelper {
 
   static final int STATIC_FINAL_SYNTHETIC = CodeConstants.ACC_STATIC | CodeConstants.ACC_STATIC | CodeConstants.ACC_FINAL | CodeConstants.ACC_SYNTHETIC;
   /**
-   * When Java introduced Enums they aded the ability to use them in Switch statements.
+   * When Java introduced Enums they added the ability to use them in Switch statements.
    * This was done in a purely syntax sugar way using the old switch on int methods.
    * The compiler creates a synthetic class with a static int array field.
    * To support enums changing post compile, It initializes this field with a length of the current enum length.
@@ -90,16 +90,18 @@ public class SwitchHelper {
       if (tmp instanceof FieldExprent) {
         FieldExprent field = (FieldExprent)tmp;
         ClassesProcessor.ClassNode classNode = DecompilerContext.getClassProcessor().getMapRootClasses().get(field.getClassname());
-        
+
         if (classNode == null || !"[I".equals(field.getDescriptor().descriptorString)) {
-          return field.getName().startsWith("$SwitchMap"); //This is non-standard but we don't have any more information so..
+		  Exprent index = ((ArrayExprent) exprent).getIndex();
+          return field.getName().startsWith("$SwitchMap") || //This is non-standard but we don't have any more information so..
+		        (index instanceof InvocationExprent && ((InvocationExprent)index).getName().equals("ordinal")); 
         }
-        
+
         StructField stField = classNode.getWrapper().getClassStruct().getField(field.getName(), field.getDescriptor().descriptorString);
         if ((stField.getAccessFlags() & STATIC_FINAL_SYNTHETIC) != STATIC_FINAL_SYNTHETIC) {
           return false;
         }
-        
+
         if ((classNode.getWrapper().getClassStruct().getAccessFlags() & CodeConstants.ACC_SYNTHETIC) == CodeConstants.ACC_SYNTHETIC) {
           return true; //TODO: Find a way to check the structure of the initalizer?
           //Exprent init = classNode.getWrapper().getStaticFieldInitializers().getWithKey(InterpreterUtil.makeUniqueKey(field.getName(), field.getDescriptor().descriptorString));

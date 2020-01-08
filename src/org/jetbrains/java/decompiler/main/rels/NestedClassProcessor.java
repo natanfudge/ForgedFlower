@@ -1,4 +1,4 @@
-// Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler.main.rels;
 
 import org.jetbrains.java.decompiler.code.CodeConstants;
@@ -24,6 +24,7 @@ import org.jetbrains.java.decompiler.struct.StructClass;
 import org.jetbrains.java.decompiler.struct.StructField;
 import org.jetbrains.java.decompiler.struct.StructMethod;
 import org.jetbrains.java.decompiler.struct.attr.StructEnclosingMethodAttribute;
+import org.jetbrains.java.decompiler.struct.attr.StructGeneralAttribute;
 import org.jetbrains.java.decompiler.struct.attr.StructLocalVariableTableAttribute.LocalVariable;
 import org.jetbrains.java.decompiler.struct.gen.MethodDescriptor;
 import org.jetbrains.java.decompiler.struct.gen.VarType;
@@ -77,8 +78,11 @@ public class NestedClassProcessor {
       else if (child.type != ClassNode.CLASS_MEMBER || (child.access & CodeConstants.ACC_STATIC) == 0) {
         insertLocalVars(node, child);
 
-        if (child.type == ClassNode.CLASS_LOCAL) {
-          setLocalClassDefinition(node.getWrapper().getMethods().getWithKey(child.enclosingMethod), child);
+        if (child.type == ClassNode.CLASS_LOCAL && child.enclosingMethod != null) {
+          MethodWrapper enclosingMethodWrapper = node.getWrapper().getMethods().getWithKey(child.enclosingMethod);
+          if(enclosingMethodWrapper != null) { // e.g. in case of switch-on-enum. FIXME: some proper handling of multiple enclosing classes 
+            setLocalClassDefinition(enclosingMethodWrapper, child);
+          }
         }
       }
     }
@@ -319,8 +323,7 @@ public class NestedClassProcessor {
         Set<String> setEnclosing = child.enclosingClasses;
 
         if (!setEnclosing.isEmpty()) {
-          StructEnclosingMethodAttribute attr =
-            (StructEnclosingMethodAttribute)child.classStruct.getAttribute("EnclosingMethod");
+          StructEnclosingMethodAttribute attr = child.classStruct.getAttribute(StructGeneralAttribute.ATTRIBUTE_ENCLOSING_METHOD);
           if (attr != null &&
               attr.getMethodName() != null &&
               node.classStruct.qualifiedName.equals(attr.getClassName()) &&
@@ -819,11 +822,7 @@ public class NestedClassProcessor {
   private static void mergeListSignatures(List<VarFieldPair> first, List<VarFieldPair> second, boolean both) {
     int i = 1;
 
-    while (true) {
-      if (first.size() <= i || second.size() <= i) {
-        break;
-      }
-
+    while (first.size() > i && second.size() > i) {
       VarFieldPair fObj = first.get(first.size() - i);
       VarFieldPair sObj = second.get(second.size() - i);
 
@@ -922,7 +921,6 @@ public class NestedClassProcessor {
     Statement first = findFirstBlock(statement, setStats);
 
     List<Exprent> lst;
-    //noinspection Duplicates
     if (first == null) {
       lst = statement.getVarDefinitions();
     }
@@ -962,7 +960,6 @@ public class NestedClassProcessor {
 
         stack.clear();
 
-        //noinspection Duplicates
         switch (st.type) {
           case Statement.TYPE_SEQUENCE:
             stack.addAll(0, st.getStats());
@@ -982,7 +979,7 @@ public class NestedClassProcessor {
     return null;
   }
 
-  private static Statement getDefStatement(Statement stat, VarType classType, Set<Statement> setStats) {
+  private static Statement getDefStatement(Statement stat, VarType classType, Set<? super Statement> setStats) {
     List<Exprent> lst = new ArrayList<>();
     Statement retStat = null;
 
@@ -1083,7 +1080,7 @@ public class NestedClassProcessor {
     public String fieldKey;
     public VarVersionPair varPair;
 
-    public VarFieldPair(String field, VarVersionPair varPair) {
+    VarFieldPair(String field, VarVersionPair varPair) {
       this.fieldKey = field;
       this.varPair = varPair;
     }
@@ -1091,7 +1088,7 @@ public class NestedClassProcessor {
     @Override
     public boolean equals(Object o) {
       if (o == this) return true;
-      if (o == null || !(o instanceof VarFieldPair)) return false;
+      if (!(o instanceof VarFieldPair)) return false;
 
       VarFieldPair pair = (VarFieldPair)o;
       return fieldKey.equals(pair.fieldKey) && varPair.equals(pair.varPair);

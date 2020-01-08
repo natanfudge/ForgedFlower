@@ -8,6 +8,7 @@ import org.jetbrains.java.decompiler.util.InterpreterUtil;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -115,7 +116,7 @@ public class DecompilerTestFixture {
 
   private static String getContent(File expected) {
     try {
-      return new String(InterpreterUtil.getBytes(expected), "UTF-8").replace("\r\n", "\n");
+      return new String(InterpreterUtil.getBytes(expected), StandardCharsets.UTF_8).replace("\r\n", "\n");
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -126,7 +127,7 @@ public class DecompilerTestFixture {
   private static class TestConsoleDecompiler extends ConsoleDecompiler {
     private final HashMap<String, ZipFile> zipFiles = new HashMap<>();
 
-    public TestConsoleDecompiler(File destination, Map<String, Object> options) {
+    TestConsoleDecompiler(File destination, Map<String, Object> options) {
       super(destination, options, new PrintStreamLogger(System.out));
     }
 

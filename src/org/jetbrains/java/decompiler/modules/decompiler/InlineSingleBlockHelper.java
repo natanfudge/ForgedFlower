@@ -121,17 +121,14 @@ public class InlineSingleBlockHelper {
         if (!edge.canInline) {
           return false; //Dirty hack, but lets do it!
         }
-        else if (edge.explicit) {
-          return true;
-        }
-        else {
+        if (!edge.explicit) {
           for (int i = index; i < seq.getStats().size(); i++) {
             if (!noExitLabels(seq.getStats().get(i), seq)) {
               return false;
             }
           }
-          return true;
         }
+        return true;
       }
       // FIXME: count labels properly
     }

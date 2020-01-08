@@ -1,4 +1,4 @@
-// Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+// Copyright 2000-2019 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler;
 
 import org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences;
@@ -12,6 +12,8 @@ public class SingleClassesTest extends SingleClassesTestBase {
     return new String[] {
       IFernflowerPreferences.BYTECODE_SOURCE_MAPPING, "1",
       IFernflowerPreferences.DUMP_ORIGINAL_LINES, "1",
+      IFernflowerPreferences.IGNORE_INVALID_BYTECODE, "1",
+      IFernflowerPreferences.VERIFY_ANONYMOUS_CLASSES, "1",
       IFernflowerPreferences.INCLUDE_ENTIRE_CLASSPATH, "1"
     };
   }
@@ -31,6 +33,7 @@ public class SingleClassesTest extends SingleClassesTestBase {
   @Test public void testDeprecations() { doTest("pkg/TestDeprecations"); }
   @Test public void testExtendsList() { doTest("pkg/TestExtendsList"); }
   @Test public void testMethodParameters() { doTest("pkg/TestMethodParameters"); }
+  @Test public void testMethodParametersAttr() { doTest("pkg/TestMethodParametersAttr"); }
   @Test public void testCodeConstructs() { doTest("pkg/TestCodeConstructs"); }
   @Test public void testConstants() { doTest("pkg/TestConstants"); }
   @Test public void testEnum() { doTest("pkg/TestEnum"); }
@@ -49,14 +52,15 @@ public class SingleClassesTest extends SingleClassesTestBase {
   @Test public void testAnonymousClass() { doTest("pkg/TestAnonymousClass"); }
   @Test public void testThrowException() { doTest("pkg/TestThrowException"); }
   @Test public void testInnerLocal() { doTest("pkg/TestInnerLocal"); }
-  @Test public void testInnerLocalPkg() { doTest("pkg/TestInnerLocalPkg"); }
   @Test public void testInnerSignature() { doTest("pkg/TestInnerSignature"); }
   @Test public void testAnonymousSignature() { doTest("pkg/TestAnonymousSignature"); }
   @Test public void testLocalsSignature() { doTest("pkg/TestLocalsSignature"); }
   @Test public void testParameterizedTypes() { doTest("pkg/TestParameterizedTypes"); }
-  @Test public void testShadowing() { doTest("pkg/TestShadowing", "pkg/Shadow", "ext/Shadow"); }
+  @Test public void testShadowing() { doTest("pkg/TestShadowing", "pkg/Shadow", "ext/Shadow",
+           "pkg/TestShadowingSuperClass"); }
   @Test public void testStringConcat() { doTest("pkg/TestStringConcat"); }
   @Test public void testJava9StringConcat() { doTest("java9/TestJava9StringConcat"); }
+  @Test public void testJava11StringConcat() { doTest("java11/TestJava11StringConcat"); }
   @Test public void testMethodReferenceSameName() { doTest("pkg/TestMethodReferenceSameName"); }
   @Test public void testMethodReferenceLetterClass() { doTest("pkg/TestMethodReferenceLetterClass"); }
   @Test public void testConstructorReference() { doTest("pkg/TestConstructorReference"); }
@@ -88,7 +92,14 @@ public class SingleClassesTest extends SingleClassesTestBase {
   @Test public void testPop2OneLongPop2() { doTest("pkg/TestPop2OneLongPop2"); }
   @Test public void testPop2TwoIntPop2() { doTest("pkg/TestPop2TwoIntPop2"); }
   @Test public void testPop2TwoIntTwoPop() { doTest("pkg/TestPop2TwoIntTwoPop"); }
+  @Test public void testSuperInner() { doTest("pkg/TestSuperInner", "pkg/TestSuperInnerBase"); }
+  @Test public void testMissingConstructorCallGood() { doTest("pkg/TestMissingConstructorCallGood"); }
+  @Test public void testMissingConstructorCallBad() { doTest("pkg/TestMissingConstructorCallBad"); }
+  @Test public void testEmptyBlocks() { doTest("pkg/TestEmptyBlocks"); }
+  @Test public void testPrivateEmptyConstructor() { doTest("pkg/TestPrivateEmptyConstructor"); }
+  @Test public void testSynchronizedUnprotected() { doTest("pkg/TestSynchronizedUnprotected"); }
   @Test public void testInterfaceSuper() { doTest("pkg/TestInterfaceSuper"); }
+  @Test public void testFieldSingleAccess() { doTest("pkg/TestFieldSingleAccess"); }
 
   // TODO: fix all below
   //@Test public void testPackageInfo() { doTest("pkg/package-info"); }
@@ -100,6 +111,9 @@ public class SingleClassesTest extends SingleClassesTestBase {
   @Test public void testGroovyClass() { doTest("pkg/TestGroovyClass"); }
   @Test public void testGroovyTrait() { doTest("pkg/TestGroovyTrait"); }
   @Test public void testPrivateClasses() { doTest("pkg/PrivateClasses"); }
+  @Test public void testSuspendLambda() { doTest("pkg/TestSuspendLambdaKt"); }
+  @Test public void testNamedSuspendFun2Kt() { doTest("pkg/TestNamedSuspendFun2Kt"); }
+  @Test public void testGenericArgs() { doTest("pkg/TestGenericArgs"); }
   @Test public void testTryWithResources() { doTest("pkg/TestTryWithResources"); }
   @Test public void testInvertedFloatComparison() { doTest("pkg/TestInvertedFloatComparison"); }
   @Test public void testLambdaImports() { doTest("pkg/TestLambdaImports"); }

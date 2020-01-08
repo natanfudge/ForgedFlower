@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.jetbrains.java.decompiler.main.DecompilerContext;
 import org.jetbrains.java.decompiler.main.decompiler.ConsoleDecompiler;
 import org.jetbrains.java.decompiler.main.decompiler.PrintStreamLogger;
 import org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences;
@@ -97,10 +96,10 @@ public class MinecraftTest  extends SingleClassesTestBase {
     if (MC_JAR.isDirectory()) {
       //decompiler.addSpace(new File(MC_JAR, "jars\\libraries"), false);
       gatherLibraries(decompiler);
-      decompiler.addSpace(new File(MC_JAR, "temp\\minecraft_ff_in.jar"), true);
+      decompiler.addSource(new File(MC_JAR, "temp\\minecraft_ff_in.jar"));
     }
     else {
-      decompiler.addSpace(MC_JAR, true);
+      decompiler.addSource(MC_JAR);
     }
     decompiler.decompileContext();
 
@@ -128,7 +127,7 @@ public class MinecraftTest  extends SingleClassesTestBase {
       for (Map<String, Object> e : libs) {
         String path = ((Map<String, Map<String, String>>)e.get("downloads")).get("artifact").get("path");
         File lib = new File(MC_PATH, "jars/libraries/" + path);
-        decompiler.addSpace(lib, false);
+        decompiler.addLibrary(lib);
       }
     } catch (Exception e) {
       throw new RuntimeException(e);

@@ -1,6 +1,4 @@
-/*
- * Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler.main;
 
 import org.jetbrains.java.decompiler.main.ClassesProcessor.ClassNode;
@@ -17,29 +15,44 @@ import org.jetbrains.java.decompiler.util.TextBuffer;
 import org.jetbrains.java.decompiler.util.ClasspathScanner;
 
 import java.io.File;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 public class Fernflower implements IDecompiledData {
   private final StructContext structContext;
   private final ClassesProcessor classProcessor;
-  private IIdentifierRenamer helper;
-  private IdentifierConverter converter;
+  private final IIdentifierRenamer helper;
+  private final IdentifierConverter converter;
 
-  public Fernflower(IBytecodeProvider provider, IResultSaver saver, Map<String, Object> options, IFernflowerLogger logger) {
+  public Fernflower(IBytecodeProvider provider, IResultSaver saver, Map<String, Object> customProperties, IFernflowerLogger logger) {
+    Map<String, Object> properties = new HashMap<>(IFernflowerPreferences.DEFAULTS);
+    if (customProperties != null) {
+      properties.putAll(customProperties);
+    }
+
+    String level = (String)properties.get(IFernflowerPreferences.LOG_LEVEL);
+    if (level != null) {
+      try {
+        logger.setSeverity(IFernflowerLogger.Severity.valueOf(level.toUpperCase(Locale.ENGLISH)));
+      }
+      catch (IllegalArgumentException ignore) { }
+    }
+
     structContext = new StructContext(saver, this, new LazyLoader(provider));
     classProcessor = new ClassesProcessor(structContext);
 
     PoolInterceptor interceptor = null;
-    Object rename = options.get(IFernflowerPreferences.RENAME_ENTITIES);
-    if ("1".equals(rename) || rename == null && "1".equals(IFernflowerPreferences.DEFAULTS.get(IFernflowerPreferences.RENAME_ENTITIES))) {
-      helper = loadHelper((String)options.get(IFernflowerPreferences.USER_RENAMER_CLASS));
+    if ("1".equals(properties.get(IFernflowerPreferences.RENAME_ENTITIES))) {
+      helper = loadHelper((String)properties.get(IFernflowerPreferences.USER_RENAMER_CLASS), logger);
       interceptor = new PoolInterceptor();
       converter = new IdentifierConverter(structContext, helper, interceptor);
     }
-
-    DecompilerContext.initContext(options, logger, structContext, classProcessor, interceptor);
+    else {
+      helper = null;
+      converter = null;
+    }
 
     String vendor = System.getProperty("java.vendor", "missing vendor");
     String javaVersion = System.getProperty("java.version", "missing java version");
@@ -49,6 +62,31 @@ public class Fernflower implements IDecompiledData {
     if (DecompilerContext.getOption(IFernflowerPreferences.INCLUDE_ENTIRE_CLASSPATH)) {
       ClasspathScanner.addAllClasspath(structContext);
     }
+
+    DecompilerContext context = new DecompilerContext(properties, logger, structContext, classProcessor, interceptor);
+    DecompilerContext.setCurrentContext(context);
+  }
+
+  private static IIdentifierRenamer loadHelper(String className, IFernflowerLogger logger) {
+    if (className != null) {
+      try {
+        Class<?> renamerClass = Fernflower.class.getClassLoader().loadClass(className);
+        return (IIdentifierRenamer) renamerClass.getDeclaredConstructor().newInstance();
+      }
+      catch (Exception e) {
+        logger.writeMessage("Cannot load renamer '" + className + "'", IFernflowerLogger.Severity.WARN, e);
+      }
+    }
+
+    return new ConverterHelper();
+  }
+
+  public void addSource(File source) {
+    structContext.addSpace(source, true);
+  }
+
+  public void addLibrary(File library) {
+    structContext.addSpace(library, false);
   }
 
   public void decompileContext() {
@@ -61,24 +99,8 @@ public class Fernflower implements IDecompiledData {
     structContext.saveContext();
   }
 
-  private static IIdentifierRenamer loadHelper(String className) {
-    if (className != null) {
-      try {
-        Class<?> renamerClass = Fernflower.class.getClassLoader().loadClass(className);
-        return (IIdentifierRenamer) renamerClass.getDeclaredConstructor().newInstance();
-      }
-      catch (Exception ignored) { }
-    }
-
-    return new ConverterHelper();
-  }
-
   public void clearContext() {
-    DecompilerContext.clearContext();
-  }
-
-  public StructContext getStructContext() {
-    return structContext;
+    DecompilerContext.setCurrentContext(null);
   }
 
   @Override
@@ -104,8 +126,8 @@ public class Fernflower implements IDecompiledData {
       classProcessor.writeClass(cl, buffer);
       return buffer.toString();
     }
-    catch (Throwable ex) {
-      DecompilerContext.getLogger().writeMessage("Class " + cl.qualifiedName + " couldn't be fully decompiled.", ex);
+    catch (Throwable t) {
+      DecompilerContext.getLogger().writeMessage("Class " + cl.qualifiedName + " couldn't be fully decompiled.", t);
       return null;
     }
   }

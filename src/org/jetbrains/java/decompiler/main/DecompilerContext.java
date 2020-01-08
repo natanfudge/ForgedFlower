@@ -1,4 +1,4 @@
-// Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler.main;
 
 import org.jetbrains.java.decompiler.main.collectors.BytecodeSourceMapper;
@@ -12,10 +12,9 @@ import org.jetbrains.java.decompiler.modules.renamer.PoolInterceptor;
 import org.jetbrains.java.decompiler.struct.StructContext;
 import org.jetbrains.java.decompiler.util.JADNameProvider;
 
-import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 public class DecompilerContext {
   public static final String CURRENT_CLASS = "CURRENT_CLASS";
@@ -25,94 +24,79 @@ public class DecompilerContext {
   public static final String CURRENT_VAR_PROCESSOR = "CURRENT_VAR_PROCESSOR";
   public static final String RENAMER_FACTORY = "RENAMER_FACTORY";
 
-  private static volatile DecompilerContext currentContext = null;
-
   private final Map<String, Object> properties;
   private final IFernflowerLogger logger;
   private final StructContext structContext;
   private final ClassesProcessor classProcessor;
   private final PoolInterceptor poolInterceptor;
+  private final IVariableNamingFactory renamerFactory;
   private ImportCollector importCollector;
   private VarProcessor varProcessor;
   private CounterContainer counterContainer;
   private BytecodeSourceMapper bytecodeSourceMapper;
-  private IVariableNamingFactory renamerFactory;
 
-  private DecompilerContext(Map<String, Object> properties,
-                            IFernflowerLogger logger,
-                            StructContext structContext,
-                            ClassesProcessor classProcessor,
-                            PoolInterceptor interceptor) {
+  public DecompilerContext(Map<String, Object> properties,
+                           IFernflowerLogger logger,
+                           StructContext structContext,
+                           ClassesProcessor classProcessor,
+                           PoolInterceptor interceptor) {
+    Objects.requireNonNull(properties);
+    Objects.requireNonNull(logger);
+    Objects.requireNonNull(structContext);
+    Objects.requireNonNull(classProcessor);
+
     this.properties = properties;
     this.logger = logger;
     this.structContext = structContext;
     this.classProcessor = classProcessor;
     this.poolInterceptor = interceptor;
     this.counterContainer = new CounterContainer();
+
+    renamerFactory = Optional.ofNullable(properties.get(RENAMER_FACTORY)).<IVariableNamingFactory>map(factory -> {
+        try {
+            return Class.forName((String) factory).asSubclass(IVariableNamingFactory.class).newInstance();
+        } catch (Exception e) {
+            if (logger != null) logger.writeMessage("Error loading renamer factory class", e);
+            return null;
+        }
+    }).orElseGet(() -> {
+        if ("1".equals(properties.get(IFernflowerPreferences.USE_JAD_VARNAMING))) {
+            return new JADNameProvider.JADNameProviderFactory();
+        } else {
+            return new IdentityRenamerFactory();
+        }
+    });
   }
 
   // *****************************************************************************
   // context setup and update
   // *****************************************************************************
 
-  public static void initContext(Map<String, Object> customProperties,
-                                 IFernflowerLogger logger,
-                                 StructContext structContext,
-                                 ClassesProcessor classProcessor,
-                                 PoolInterceptor interceptor) {
-    Objects.requireNonNull(logger);
-    Objects.requireNonNull(structContext);
-    Objects.requireNonNull(classProcessor);
+  private static final ThreadLocal<DecompilerContext> currentContext = new ThreadLocal<>();
 
-    Map<String, Object> properties = new HashMap<>(IFernflowerPreferences.DEFAULTS);
-    if (customProperties != null) {
-      properties.putAll(customProperties);
-    }
-
-    String level = (String)properties.get(IFernflowerPreferences.LOG_LEVEL);
-    if (level != null) {
-      try {
-        logger.setSeverity(IFernflowerLogger.Severity.valueOf(level.toUpperCase(Locale.US)));
-      }
-      catch (IllegalArgumentException ignore) { }
-    }
-
-    currentContext = new DecompilerContext(properties, logger, structContext, classProcessor, interceptor);
-
-    if (DecompilerContext.getProperty(RENAMER_FACTORY) != null) {
-      try {
-        currentContext.renamerFactory = Class.forName((String) DecompilerContext.getProperty(RENAMER_FACTORY)).asSubclass(IVariableNamingFactory.class).newInstance();
-      } catch (Exception e) {
-        if (getLogger() != null)
-          getLogger().writeMessage("Error loading renamer factory class", e);
-      }
-    }
-    if (DecompilerContext.getNamingFactory() == null) {
-      if (DecompilerContext.getOption(IFernflowerPreferences.USE_JAD_VARNAMING)) {
-        currentContext.renamerFactory = new JADNameProvider.JADNameProviderFactory();
-      } else {
-        currentContext.renamerFactory = new IdentityRenamerFactory();
-      }
-    }
+  public static DecompilerContext getCurrentContext() {
+    return currentContext.get();
   }
 
-  public static void clearContext() {
-    currentContext = null;
+  public static void setCurrentContext(DecompilerContext context) {
+    currentContext.set(context);
   }
 
   public static void setProperty(String key, Object value) {
-    currentContext.properties.put(key, value);
+    getCurrentContext().properties.put(key, value);
   }
 
   public static void startClass(ImportCollector importCollector) {
-    currentContext.importCollector = importCollector;
-    currentContext.counterContainer = new CounterContainer();
-    currentContext.bytecodeSourceMapper = new BytecodeSourceMapper();
+    DecompilerContext context = getCurrentContext();
+    context.importCollector = importCollector;
+    context.counterContainer = new CounterContainer();
+    context.bytecodeSourceMapper = new BytecodeSourceMapper();
   }
 
   public static void startMethod(VarProcessor varProcessor) {
-    currentContext.varProcessor = varProcessor;
-    currentContext.counterContainer = new CounterContainer();
+    DecompilerContext context = getCurrentContext();
+    context.varProcessor = varProcessor;
+    context.counterContainer = new CounterContainer();
   }
 
   // *****************************************************************************
@@ -120,7 +104,7 @@ public class DecompilerContext {
   // *****************************************************************************
 
   public static Object getProperty(String key) {
-    return currentContext.properties.get(key);
+    return getCurrentContext().properties.get(key);
   }
 
   public static boolean getOption(String key) {
@@ -133,38 +117,38 @@ public class DecompilerContext {
   }
 
   public static IFernflowerLogger getLogger() {
-    return currentContext.logger;
+    return getCurrentContext().logger;
   }
 
   public static StructContext getStructContext() {
-    return currentContext.structContext;
+    return getCurrentContext().structContext;
   }
 
   public static ClassesProcessor getClassProcessor() {
-    return currentContext.classProcessor;
+    return getCurrentContext().classProcessor;
   }
 
   public static PoolInterceptor getPoolInterceptor() {
-    return currentContext.poolInterceptor;
+    return getCurrentContext().poolInterceptor;
   }
 
   public static ImportCollector getImportCollector() {
-    return currentContext.importCollector;
+    return getCurrentContext().importCollector;
   }
 
   public static VarProcessor getVarProcessor() {
-    return currentContext.varProcessor;
+    return getCurrentContext().varProcessor;
   }
 
   public static CounterContainer getCounterContainer() {
-    return currentContext.counterContainer;
+    return getCurrentContext().counterContainer;
   }
 
   public static IVariableNamingFactory getNamingFactory() {
-    return currentContext.renamerFactory;
+    return getCurrentContext().renamerFactory;
   }
 
   public static BytecodeSourceMapper getBytecodeSourceMapper() {
-    return currentContext.bytecodeSourceMapper;
+    return getCurrentContext().bytecodeSourceMapper;
   }
 }

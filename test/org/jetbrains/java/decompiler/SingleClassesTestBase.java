@@ -31,7 +31,7 @@ public class SingleClassesTestBase {
   protected DecompilerTestFixture fixture;
   
   protected String[] getDecompilerOptions() {
-    return new String[] {};
+    return new String[0];
   }
 
   @Before
@@ -52,14 +52,14 @@ public class SingleClassesTestBase {
     File classFile = new File(fixture.getTestDataDir(), "/classes/" + testFile + ".class");
     assertTrue(classFile.isFile());
     for (File file : collectClasses(classFile)) {
-      decompiler.addSpace(file, true);
+      decompiler.addSource(file);
     }
 
     for (String companionFile : companionFiles) {
       File companionClassFile = new File(fixture.getTestDataDir(), "/classes/" + companionFile + ".class");
       assertTrue(companionClassFile.isFile());
       for (File file : collectClasses(companionClassFile)) {
-        decompiler.addSpace(file, true);
+        decompiler.addSource(file);
       }
     }
 

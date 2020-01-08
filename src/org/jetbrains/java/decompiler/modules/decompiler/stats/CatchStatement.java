@@ -1,6 +1,4 @@
-/*
- * Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler.modules.decompiler.stats;
 
 import org.jetbrains.java.decompiler.code.CodeConstants;
@@ -15,6 +13,7 @@ import org.jetbrains.java.decompiler.modules.decompiler.ExprProcessor;
 import org.jetbrains.java.decompiler.modules.decompiler.StatEdge;
 import org.jetbrains.java.decompiler.modules.decompiler.exps.VarExprent;
 import org.jetbrains.java.decompiler.struct.gen.VarType;
+import org.jetbrains.java.decompiler.util.TextBuffer;
 
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -141,6 +140,7 @@ public class CatchStatement extends Statement {
     return null;
   }
 
+  @Override
   public TextBuffer toJava(int indent, BytecodeMappingTracer tracer) {
     TextBuffer buf = new TextBuffer();
 
@@ -197,7 +197,7 @@ public class CatchStatement extends Statement {
       buf.append(vars.get(i - 1).toJava(indent, tracer));
       buf.append(") {").appendLineSeparator();
       tracer.incrementCurrentSourceLine();
-      buf.append(ExprProcessor.jmpWrapper(stat, indent + 1, true, tracer)).appendIndent(indent)
+      buf.append(ExprProcessor.jmpWrapper(stat, indent + 1, false, tracer)).appendIndent(indent)
         .append("}");
     }
     buf.appendLineSeparator();
@@ -207,13 +207,13 @@ public class CatchStatement extends Statement {
   }
 
   public List<Object> getSequentialObjects() {
-
     List<Object> lst = new ArrayList<>(resources);
     lst.addAll(stats);
 
     return lst;
   }
 
+  @Override
   public Statement getSimpleCopy() {
     CatchStatement cs = new CatchStatement();
 

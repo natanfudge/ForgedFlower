@@ -1,7 +1,10 @@
-// Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler.util;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 public class FastFixedSetFactory<E> {
 
@@ -145,7 +148,7 @@ public class FastFixedSetFactory<E> {
 
     public boolean equals(Object o) {
       if (o == this) return true;
-      if (o == null || !(o instanceof FastFixedSet)) return false;
+      if (!(o instanceof FastFixedSet)) return false;
 
       int[] extdata = ((FastFixedSet)o).getData();
       int[] intdata = data;
@@ -171,6 +174,7 @@ public class FastFixedSetFactory<E> {
       return true;
     }
 
+    @Override
     public Iterator<E> iterator() {
       return new FastFixedSetIterator<>(this);
     }
@@ -285,11 +289,13 @@ public class FastFixedSetFactory<E> {
       return -1;
     }
 
+    @Override
     public boolean hasNext() {
       next_pointer = getNextIndex(pointer);
       return (next_pointer >= 0);
     }
 
+    @Override
     public E next() {
       if (next_pointer >= 0) {
         pointer = next_pointer;
@@ -305,6 +311,7 @@ public class FastFixedSetFactory<E> {
       return pointer < size ? colValuesInternal.getKey(pointer) : null;
     }
 
+    @Override
     public void remove() {
       int[] index = colValuesInternal.get(pointer);
       data[index[0]] &= ~index[1];

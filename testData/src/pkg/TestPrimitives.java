@@ -1,6 +1,6 @@
 package pkg;
 
-import java.util.List;
+import java.util.*;
 
 public class TestPrimitives {
   private void testInvalidUnboxing() {
@@ -186,4 +186,8 @@ public class TestPrimitives {
     Boolean.valueOf(value).hashCode();
   }
 
+  void testCastRequired() {
+    HashMap<String, Byte> map = new HashMap<String, Byte>();
+    map.put("test", (byte) 0);
+  }
 }

@@ -1,12 +1,9 @@
-/*
- * Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler.modules.decompiler.exps;
 
 import org.jetbrains.java.decompiler.code.CodeConstants;
 import org.jetbrains.java.decompiler.main.ClassesProcessor.ClassNode;
 import org.jetbrains.java.decompiler.main.DecompilerContext;
-import org.jetbrains.java.decompiler.util.TextBuffer;
 import org.jetbrains.java.decompiler.main.collectors.BytecodeMappingTracer;
 import org.jetbrains.java.decompiler.main.extern.IFernflowerPreferences;
 import org.jetbrains.java.decompiler.main.rels.MethodWrapper;
@@ -28,6 +25,7 @@ import org.jetbrains.java.decompiler.struct.match.MatchNode;
 import org.jetbrains.java.decompiler.struct.match.MatchNode.RuleValue;
 import org.jetbrains.java.decompiler.util.InterpreterUtil;
 import org.jetbrains.java.decompiler.util.ListStack;
+import org.jetbrains.java.decompiler.util.TextBuffer;
 import org.jetbrains.java.decompiler.util.TextUtil;
 
 import java.lang.reflect.Method;
@@ -74,7 +72,7 @@ public class InvocationExprent extends Exprent {
   public InvocationExprent(int opcode,
                            LinkConstant cn,
                            List<PooledConstant> bootstrapArguments,
-                           ListStack<Exprent> stack,
+                           ListStack<? extends Exprent> stack,
                            BitSet bytecodeOffsets) {
     this();
 
@@ -476,7 +474,7 @@ public class InvocationExprent extends Exprent {
       if (isBoxingCall() && canIgnoreBoxing && !forceBoxing) {
         // process general "boxing" calls, e.g. 'Object[] data = { true }' or 'Byte b = 123'
         // here 'byte' and 'short' values do not need an explicit narrowing type cast
-        ExprProcessor.getCastedExprent(lstParameters.get(0), descriptor.params[0], buf, indent, false, false, false, tracer);
+        ExprProcessor.getCastedExprent(lstParameters.get(0), descriptor.params[0], buf, indent, false, false, false, false, tracer);
         return buf;
       }
 
@@ -755,14 +753,14 @@ public class InvocationExprent extends Exprent {
         }
         */
 
-        Exprent param = unboxIfNeeded(lstParameters.get(i));
+        Exprent param = lstParameters.get(i);
 
         if (i == parameters.size() - 1 && param.getExprType() == VarType.VARTYPE_NULL && NewExprent.probablySyntheticParameter(descriptor.params[i].value)) {
           break;  // skip last parameter of synthetic constructor call
         }
 
         // 'byte' and 'short' literals need an explicit narrowing type cast when used as a parameter
-        ExprProcessor.getCastedExprent(param, types[i], buff, indent, true, ambiguous, true, tracer);
+        ExprProcessor.getCastedExprent(param, descriptor.params[i], buff, indent, true, ambiguous, true, true, tracer);
 
         // the last "new Object[0]" in the vararg call is not printed
         if (buff.length() > 0) {
@@ -777,17 +775,6 @@ public class InvocationExprent extends Exprent {
     }
 
     return buf;
-  }
-
-  public static Exprent unboxIfNeeded(Exprent param) {
-    // "unbox" invocation parameters, e.g. 'byteSet.add((byte)123)' or 'new ShortContainer((short)813)'
-    if (param.type == Exprent.EXPRENT_INVOCATION) {
-      InvocationExprent invoc = (InvocationExprent)param;
-      if (invoc.isBoxingCall() && !invoc.forceBoxing) {
-        param = invoc.lstParameters.get(0);
-      }
-    }
-    return param;
   }
 
   private boolean isVarArgCall() {
@@ -808,7 +795,7 @@ public class InvocationExprent extends Exprent {
     return false;
   }
 
-  private boolean isBoxingCall() {
+  public boolean isBoxingCall() {
     if (isStatic && "valueOf".equals(name) && lstParameters.size() == 1) {
       int paramType = lstParameters.get(0).getExprType().type;
 
@@ -834,6 +821,10 @@ public class InvocationExprent extends Exprent {
     }
 
     return false;
+  }
+
+  public boolean isForcedBox() {
+    return forceBoxing;
   }
 
   public void markUsingBoxingResult() {
@@ -1235,7 +1226,7 @@ public class InvocationExprent extends Exprent {
   @Override
   public boolean equals(Object o) {
     if (o == this) return true;
-    if (o == null || !(o instanceof InvocationExprent)) return false;
+    if (!(o instanceof InvocationExprent)) return false;
 
     InvocationExprent it = (InvocationExprent)o;
     return InterpreterUtil.equalObjects(name, it.getName()) &&

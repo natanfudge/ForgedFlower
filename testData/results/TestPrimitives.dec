@@ -1,5 +1,6 @@
 package pkg;
 
+import java.util.HashMap;
 import java.util.List;
 
 public class TestPrimitives {
@@ -183,6 +184,11 @@ public class TestPrimitives {
    void testAutoBoxingCallRequired(boolean value) {
       Boolean.valueOf(value).hashCode();// 186
    }// 187
+
+   void testCastRequired() {
+      HashMap<String, Byte> map = new HashMap();// 177
+      map.put("test", (byte)0);// 178
+   }// 179
 }
 
 class 'pkg/TestPrimitives' {
@@ -1131,6 +1137,14 @@ class 'pkg/TestPrimitives' {
       5      183
       6      183
       8      184
+   }
+
+   method 'testCastRequired ()V' {
+      7      167
+      9      168
+      b      168
+      f      168
+      13      169
    }
 }
 

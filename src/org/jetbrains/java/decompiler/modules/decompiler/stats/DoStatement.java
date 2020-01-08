@@ -1,13 +1,11 @@
-/*
- * Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
- */
+// Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
 package org.jetbrains.java.decompiler.modules.decompiler.stats;
 
-import org.jetbrains.java.decompiler.util.TextBuffer;
 import org.jetbrains.java.decompiler.main.collectors.BytecodeMappingTracer;
 import org.jetbrains.java.decompiler.modules.decompiler.ExprProcessor;
 import org.jetbrains.java.decompiler.modules.decompiler.StatEdge;
 import org.jetbrains.java.decompiler.modules.decompiler.exps.Exprent;
+import org.jetbrains.java.decompiler.util.TextBuffer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,6 +78,7 @@ public class DoStatement extends Statement {
     return null;
   }
 
+  @Override
   public TextBuffer toJava(int indent, BytecodeMappingTracer tracer) {
     TextBuffer buf = new TextBuffer();
 
@@ -94,21 +93,21 @@ public class DoStatement extends Statement {
       case LOOP_DO:
         buf.appendIndent(indent).append("while(true) {").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
-        buf.append(ExprProcessor.jmpWrapper(first, indent + 1, true, tracer));
+        buf.append(ExprProcessor.jmpWrapper(first, indent + 1, false, tracer));
         buf.appendIndent(indent).append("}").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
         break;
       case LOOP_DOWHILE:
         buf.appendIndent(indent).append("do {").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
-        buf.append(ExprProcessor.jmpWrapper(first, indent + 1, true, tracer));
+        buf.append(ExprProcessor.jmpWrapper(first, indent + 1, false, tracer));
         buf.appendIndent(indent).append("} while(").append(conditionExprent.get(0).toJava(indent, tracer)).append(");").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
         break;
       case LOOP_WHILE:
         buf.appendIndent(indent).append("while(").append(conditionExprent.get(0).toJava(indent, tracer)).append(") {").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
-        buf.append(ExprProcessor.jmpWrapper(first, indent + 1, true, tracer));
+        buf.append(ExprProcessor.jmpWrapper(first, indent + 1, false, tracer));
         buf.appendIndent(indent).append("}").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
         break;
@@ -121,7 +120,7 @@ public class DoStatement extends Statement {
           .append(conditionExprent.get(0).toJava(indent, tracer)).append("; ").append(incExprent.get(0).toJava(indent, tracer)).append(") {")
           .appendLineSeparator();
         tracer.incrementCurrentSourceLine();
-        buf.append(ExprProcessor.jmpWrapper(first, indent + 1, true, tracer));
+        buf.append(ExprProcessor.jmpWrapper(first, indent + 1, false, tracer));
         buf.appendIndent(indent).append("}").appendLineSeparator();
         tracer.incrementCurrentSourceLine();
         break;
@@ -137,6 +136,7 @@ public class DoStatement extends Statement {
     return buf;
   }
 
+  @Override
   public List<Object> getSequentialObjects() {
 
     List<Object> lst = new ArrayList<>();
@@ -167,6 +167,7 @@ public class DoStatement extends Statement {
     return lst;
   }
 
+  @Override
   public void replaceExprent(Exprent oldexpr, Exprent newexpr) {
     if (initExprent.get(0) == oldexpr) {
       initExprent.set(0, newexpr);
@@ -179,6 +180,7 @@ public class DoStatement extends Statement {
     }
   }
 
+  @Override
   public Statement getSimpleCopy() {
     return new DoStatement();
   }
