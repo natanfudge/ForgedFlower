@@ -60,7 +60,7 @@ public class DecompilerTestFixture {
     if (tempDir != null && cleanup) {
       delete(tempDir);
     }
-    decompiler.close();
+    if (decompiler != null) decompiler.close();
   }
 
   public File getTestDataDir() {
