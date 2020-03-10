@@ -145,11 +145,11 @@ public class MethodProcessorRunnable implements Runnable {
           continue;
         }
 
+        MergeHelper.enhanceLoops(root);
+
         if (LoopExtractHelper.extractLoops(root)) {
           continue;
         }
-
-        MergeHelper.enhanceLoops(root);
 
         if (!IfHelper.mergeAllIfs(root)) {
           break;
@@ -175,6 +175,12 @@ public class MethodProcessorRunnable implements Runnable {
 
       if (InlineSingleBlockHelper.inlineSingleBlocks(root)) {
         continue;
+      }
+
+      // this has to be done last so it does not screw up the formation of for loops
+      if (MergeHelper.makeDoWhileLoops(root)) {
+    	LabelHelper.cleanUpEdges(root);
+        LabelHelper.identifyLabels(root);
       }
 
       // initializer may have at most one return point, so no transformation of method exits permitted

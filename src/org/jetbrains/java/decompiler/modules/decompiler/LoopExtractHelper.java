@@ -111,6 +111,14 @@ public class LoopExtractHelper {
 
           if (set.isEmpty()) { // no direct continues in a do{}while loop
             if (isExternStatement(stat, ifstat, ifstat)) {
+              Statement first = stat.getFirst();
+              while (first.type == Statement.TYPE_SEQUENCE) {
+                first = first.getFirst();
+              }
+              if (first.type == Statement.TYPE_DO && ((DoStatement)first).getLooptype() == DoStatement.LOOP_DO) {
+                return false;
+              }
+
               for (Statement s : stats) {
                 if (!ifstat.containsStatement(s)) {
                   return false;

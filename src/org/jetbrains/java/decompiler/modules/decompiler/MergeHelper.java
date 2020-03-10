@@ -150,45 +150,13 @@ public class MergeHelper {
         if (firstif.iftype == IfStatement.IFTYPE_IF) {
           if (firstif.getIfstat() == null) {
             StatEdge ifedge = firstif.getIfEdge();
-            boolean infinite = false;
-
-            // there are some special cases where we can fix this
-            // FIXME do these result from an error somewhere else?
-            if (!isDirectPath(stat, ifedge.getDestination())) {
-              // bad infinite loop needs special handling
-              infinite = ifedge.getType() == StatEdge.TYPE_CONTINUE && stat.getFirst().equals(firstif) && stat.equals(ifedge.getDestination());
-
-              // inside a switch or loop and we need to add a break after the current loop
-              Statement parent = stat.getParent();
-              if (!infinite && parent != null) {
-                if (parent.type != Statement.TYPE_SEQUENCE || parent.getStats().getLast().equals(stat)) {
-                  Statement outer = parent.getParent();
-                  while (outer != null && outer.type != Statement.TYPE_SWITCH && outer.type != Statement.TYPE_DO) {
-                    outer = outer.getParent();
-                  }
-
-                  if (outer != null) {
-                    List<StatEdge> edges = outer.getAllSuccessorEdges();
-                    if (!edges.isEmpty()) {
-                      StatEdge edge = edges.get(0);
-                      if (edge.getDestination().equals(ifedge.getDestination())) {
-                        stat.addSuccessor(new StatEdge(StatEdge.TYPE_BREAK, stat, ifedge.getDestination(), outer));
-                      }
-                    }
-                  }
-                }
-              }
-            }
-
-            if (infinite || isDirectPath(stat, ifedge.getDestination())) {
+            if (isDirectPath(stat, ifedge.getDestination()) || addContinueOrBreak(stat, ifedge)) {
               // exit condition identified
               stat.setLooptype(DoStatement.LOOP_WHILE);
 
               // negate condition (while header)
               IfExprent ifexpr = (IfExprent)firstif.getHeadexprent().copy();
-              if (!infinite) {
-                ifexpr.negateIf();
-              }
+              ifexpr.negateIf();
 
               if (stat.getConditionExprent() != null) {
                 ifexpr.getCondition().addBytecodeOffsets(stat.getConditionExprent().bytecode);
@@ -199,10 +167,6 @@ public class MergeHelper {
 
               // remove edges
               firstif.getFirst().removeSuccessor(ifedge);
-
-              if (infinite) {
-                ifedge = firstif.getAllSuccessorEdges().get(0);
-              }
 
               firstif.removeSuccessor(firstif.getAllSuccessorEdges().get(0));
 
@@ -231,7 +195,7 @@ public class MergeHelper {
               return true;
             }
           }
-          else {
+          //else { // fix infinite loops
             StatEdge elseedge = firstif.getAllSuccessorEdges().get(0);
             if (isDirectPath(stat, elseedge.getDestination())) {
               // exit condition identified
@@ -285,7 +249,7 @@ public class MergeHelper {
 
               return true;
             }
-          }
+          //}
         }
       }
     }
@@ -564,7 +528,8 @@ public class MergeHelper {
             holder.getInstance().type == Exprent.EXPRENT_VAR) {
           VarExprent copy = (VarExprent)initExprents[1].getLeft();
           VarExprent inc = (VarExprent)holder.getInstance();
-          if (copy.getIndex() == inc.getIndex() && copy.getVersion() == inc.getVersion() && !inc.isVarReferenced(stat.getTopParent(), copy)) {
+          if (copy.getIndex() == inc.getIndex() && copy.getVersion() == inc.getVersion() &&
+              !inc.isVarReferenced(stat.getTopParent(), copy) && !isNextCall(initExprents[1].getRight())) {
             preData.getExprents().remove(initExprents[1]);
             initExprents[1].getBytecodeRange(initExprents[1].getRight().bytecode);
             stat.getIncExprent().getBytecodeRange(initExprents[1].getRight().bytecode);
@@ -743,5 +708,55 @@ public class MergeHelper {
       return false;
     InvocationExprent inv = (InvocationExprent)exp;
     return inv.isUnboxingCall() && isNextCall(inv.getInstance());
+  }
+
+  public static boolean makeDoWhileLoops(RootStatement root) {
+    if (makeDoWhileRec(root)) {
+      SequenceHelper.condenseSequences(root);
+      return true;
+    }
+    return false;
+  }
+
+  private static boolean makeDoWhileRec(Statement stat) {
+    boolean ret = false;
+
+    for (Statement st : stat.getStats()) {
+      ret |= makeDoWhileRec(st);
+    }
+
+    if (stat.type == Statement.TYPE_DO) {
+      DoStatement dostat = (DoStatement)stat;
+      if (dostat.getLooptype() == DoStatement.LOOP_DO) {
+        matchDoWhile(dostat);
+        ret |= dostat.getLooptype() != DoStatement.LOOP_DO;
+      }
+    }
+
+    return ret;
+  }
+
+  private static boolean addContinueOrBreak(DoStatement stat, StatEdge ifedge) {
+    Statement outer = stat.getParent();
+    while (outer != null && outer.type != Statement.TYPE_SWITCH && outer.type != Statement.TYPE_DO) {
+      outer = outer.getParent();
+    }
+
+    if (outer != null && (outer.type == Statement.TYPE_SWITCH || ((DoStatement)outer).getLooptype() != DoStatement.LOOP_DO)) {
+      Statement parent = stat.getParent();
+      if (parent.type != Statement.TYPE_SEQUENCE || parent.getStats().getLast().equals(stat)) {
+        // need to insert a break or continue after the loop
+        if (ifedge.getDestination().equals(outer)) {
+          stat.addSuccessor(new StatEdge(StatEdge.TYPE_CONTINUE, stat, ifedge.getDestination(), outer));
+          return true;
+        }
+        else if (MergeHelper.isDirectPath(outer, ifedge.getDestination())) {
+          stat.addSuccessor(new StatEdge(StatEdge.TYPE_BREAK, stat, ifedge.getDestination(), outer));
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 }
