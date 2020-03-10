@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2017 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
+ * Copyright 2000-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license that can be found in the LICENSE file.
  */
 package org.jetbrains.java.decompiler.main;
 
@@ -699,6 +699,15 @@ public class ClassWriter {
           }
         }
 
+        List<StructMethodParametersAttribute.Entry> methodParameters = null;
+        if (DecompilerContext.getOption(IFernflowerPreferences.USE_METHOD_PARAMETERS)) {
+          StructMethodParametersAttribute attr =
+            (StructMethodParametersAttribute)mt.getAttribute(StructGeneralAttribute.ATTRIBUTE_METHOD_PARAMETERS);
+          if (attr != null) {
+            methodParameters = attr.getEntries();
+          }
+        }
+
         int index = isEnum && init ? 3 : thisVar ? 1 : 0;
         int start = isEnum && init ? 2 : 0;
         boolean hasDescriptor = descriptor != null;
@@ -715,7 +724,10 @@ public class ClassWriter {
 
             appendParameterAnnotations(buffer, mt, paramCount);
 
-            if (methodWrapper.varproc.getVarFinal(new VarVersionPair(index, 0)) == VarTypeProcessor.VAR_EXPLICIT_FINAL) {
+            if (methodParameters != null && paramCount < methodParameters.size()) {
+              appendModifiers(buffer, methodParameters.get(paramCount).myAccessFlags, CodeConstants.ACC_FINAL, isInterface, 0);
+            }
+            else if (methodWrapper.varproc.getVarFinal(new VarVersionPair(index, 0)) == VarTypeProcessor.VAR_EXPLICIT_FINAL) {
               buffer.append("final ");
             }
 
@@ -736,14 +748,16 @@ public class ClassWriter {
             }
 
             buffer.append(' ');
-            String parameterName = methodWrapper.varproc.getVarName(new VarVersionPair(index, 0));
 
-            if ((flags & (CodeConstants.ACC_ABSTRACT | CodeConstants.ACC_NATIVE)) != 0) {
+            String parameterName;
+            if (methodParameters != null && paramCount < methodParameters.size()) {
+              parameterName = methodParameters.get(paramCount).myName;
+            }
+            else {
+              parameterName = methodWrapper.varproc.getVarName(new VarVersionPair(index, 0));
               String newParameterName = methodWrapper.methodStruct.getVariableNamer().renameAbstractParameter(parameterName, index);
               parameterName = !newParameterName.equals(parameterName) ? newParameterName : DecompilerContext.getStructContext().renameAbstractParameter(methodWrapper.methodStruct.getClassStruct().qualifiedName, mt.getName(), mt.getDescriptor(), index - (((flags & CodeConstants.ACC_STATIC) == 0) ? 1 : 0), parameterName);
-
             }
-
             buffer.append(parameterName == null ? "param" + index : parameterName); // null iff decompiled with errors
 
             paramCount++;
