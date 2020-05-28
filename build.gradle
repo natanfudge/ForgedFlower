@@ -1,6 +1,9 @@
 plugins {
 	id 'org.ajoberstar.grgit' version '4.0.1'
+  id "com.github.johnrengelman.shadow" version "5.2.0"
 }
+
+
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'maven-publish'
@@ -8,14 +11,14 @@ apply plugin: 'eclipse'
 
 
 allprojects {
-	group = 'net.minecraftforge' //put it under us for now, because this is a unofficial mirrior
+	group = 'io.github.fudge' //put it under us for now, because this is a unofficial mirrior
 	version = "1.5.380+${gitVersion()}" // The tag should be OurVersion.FernFlowerCommitNumber, ex: 1.5.380
 }
 def gitVersion() {
 	return grgit?.head()?.abbreviatedId ?: "SNAPSHOT"
 }
 
-archivesBaseName = 'forgeflower'
+archivesBaseName = 'forgedflower'
 ext {
 	CHANGELOG = rootProject.file('build/changelog.txt')
 }
@@ -100,10 +103,17 @@ artifacts {
 	archives sourceJar
 }
 
+shadowJar {
+  relocate 'org.jetbrains.java.decompiler', 'fudge.forgedflower'
+  relocate 'net.fabricmc.fernflower', 'fudge.forgedflower'
+
+  classifier = ''
+}
+
 publishing {
 	publications {
-		mavenJava(MavenPublication) {
-			from components.java
+		shadow(MavenPublication) {publication ->
+      project.shadow.component(publication)
 			if (CHANGELOG.exists()) {
 				artifact source: CHANGELOG, classifier: 'changelog'
 			}
@@ -152,3 +162,4 @@ publishing {
 		}
 	}
 }
+
