@@ -1,21 +1,19 @@
 plugins {
 	id 'org.ajoberstar.grgit' version '4.0.1'
+	id "com.github.johnrengelman.shadow" version "5.2.0"
+	id "com.jfrog.bintray" version "1.8.5"
 }
 apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'maven-publish'
 apply plugin: 'eclipse'
 
-
 allprojects {
-	group = 'net.minecraftforge' //put it under us for now, because this is a unofficial mirrior
-	version = "1.5.380+${gitVersion()}" // The tag should be OurVersion.FernFlowerCommitNumber, ex: 1.5.380
-}
-def gitVersion() {
-	return grgit?.head()?.abbreviatedId ?: "SNAPSHOT"
+	group = project.group
+	version = project.version
 }
 
-archivesBaseName = 'forgeflower'
+archivesBaseName = project.archives_base_name
 ext {
 	CHANGELOG = rootProject.file('build/changelog.txt')
 }
@@ -100,10 +98,17 @@ artifacts {
 	archives sourceJar
 }
 
+shadowJar {
+	relocate 'org.jetbrains.java.decompiler', 'fudge.forgedflower'
+	relocate 'net.fabricmc.fernflower', 'fudge.forgedflower'
+
+	classifier = ''
+}
+
 publishing {
 	publications {
-		mavenJava(MavenPublication) {
-			from components.java
+		shadow(MavenPublication) { publication ->
+			project.shadow.component(publication)
 			if (CHANGELOG.exists()) {
 				artifact source: CHANGELOG, classifier: 'changelog'
 			}
@@ -115,17 +120,17 @@ publishing {
 				artifactId = project.archivesBaseName
 				name = project.archivesBaseName
 				packaging = 'jar'
-				description = 'Fernflower from https://github.com/JetBrains/intellij-community as standalone library, With Forges Modifications'
-				url = 'https://github.com/MinecraftForge/ForgeFlower'
+				description = 'Fernflower from https://github.com/JetBrains/intellij-community as standalone library, With Forges Modifications and with Fabric additions'
+				url = 'https://github.com/natanfudge/ForgedFlower'
 
 				scm {
-					url = 'https://github.com/MinecraftForge/ForgeFlower'
-					connection = 'scm:git:git://github.com/MinecraftForge/ForgeFlower.git'
-					developerConnection = 'scm:git:git@github.com:MinecraftForge/ForgeFlower.git'
+					url = 'https://github.com/natanfudge/ForgedFlower'
+					connection = 'scm:git:git://github.com/natanfudge/ForgedFlower.git'
+					developerConnection = 'scm:git:git@github.com/natanfudge/ForgedFlower.git'
 				}
 				issueManagement {
 					system = 'github'
-					url = 'https://github.com/MinecraftForge/ForgeFlower/issues'
+					url = 'https://github.com/natanfudge/ForgedFlower/issues'
 				}
 
 				licenses {
@@ -151,4 +156,22 @@ publishing {
 			}
 		}
 	}
+}
+
+
+bintray {
+	user = project.hasProperty('bintray_user') ? project.property('bintray_user') : ""
+	key = project.hasProperty('bintray_api_key') ? project.property('bintray_api_key') : ""
+	publications = ["shadow"]
+	publish = true //[Default: false] Whether version should be auto published after an upload
+	pkg {
+		repo = "libs"
+		name = "ForgedFlower"
+		licenses = ["apache"]
+		version {
+			name = project.version
+			released = new Date()
+		}
+	}
+
 }
